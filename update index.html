@@ -58,23 +58,6 @@
       min-width: 280px;
       max-width: 400px;
     }
-
-    /* Thêm style cho nút xuất file */
-    #exportExcelBtn {
-      display: inline-block;
-      margin-left: 15px;
-      padding: 12px 20px;
-      font-size: 18px;
-      background-color: #b80000;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-    }
-    #exportExcelBtn:hover {
-      background-color: #930000;
-    }
   </style>
 </head>
 <body>
@@ -82,9 +65,13 @@
   <div class="input-area">
     <input type="text" id="nums" maxlength="3" placeholder="VD: 123" />
     <button>Thêm lượt</button>
+  </div>
 
-    <!-- Nút xuất Excel -->
-    <button id="exportExcelBtn" style="display: inline-block;">Xuất Excel</button>
+  <!-- Nút xuất Excel -->
+  <div style="margin-bottom: 20px;">
+    <button id="exportExcelBtn" style="display:inline-block; padding: 10px 20px; font-size: 16px; cursor:pointer; background:#b80000; color:#fff; border:none; border-radius:6px;">
+      📥 Xuất Excel
+    </button>
   </div>
 
   <div class="grid">
@@ -128,7 +115,7 @@
     </div>
   </div>
 
-  <!-- Thêm thư viện SheetJS -->
+  <!-- Thư viện SheetJS để xuất Excel -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <script>
@@ -252,26 +239,23 @@
       }
     });
 
-    // Hàm xuất file Excel
-    function exportToExcel() {
+    // Hàm xuất Excel
+    document.getElementById('exportExcelBtn').addEventListener('click', () => {
       if(dataList.length === 0) {
-        alert("Không có dữ liệu để xuất.");
+        alert('Chưa có dữ liệu để xuất.');
         return;
       }
 
-      // Tạo mảng dữ liệu cho sheet, gồm tiêu đề và từng lượt
-      const ws_data = [];
-      ws_data.push(["Lượt", "Ngựa 1", "Ngựa 2", "Ngựa 3", "Ngựa 4", "Ngựa 5", "Ngựa 6"]);
-
+      // Chuẩn bị dữ liệu để xuất
+      const ws_data = [
+        ['Lượt', '1', '2', '3', '4', '5', '6']
+      ];
       dataList.forEach((row, idx) => {
-        // Tạo mảng 6 phần tử, gán ngựa theo thứ tự vị trí
-        // Nếu ngựa ở vị trí đó thì ghi số ngựa, ngược lại để trống
-        const rowExcel = [idx + 1];
-        for(let horse=1; horse<=6; horse++) {
-          const pos = row.indexOf(horse);
-          rowExcel.push(pos !== -1 ? horse : "");
+        const rowData = [idx + 1];
+        for(let i=1; i<=6; i++) {
+          rowData.push(row.includes(i) ? i : '');
         }
-        ws_data.push(rowExcel);
+        ws_data.push(rowData);
       });
 
       // Tạo workbook và worksheet
@@ -280,10 +264,8 @@
       XLSX.utils.book_append_sheet(wb, ws, "Lịch sử đua");
 
       // Xuất file
-      XLSX.writeFile(wb, "KetQuaDuaNguar.xlsx");
-    }
-
-    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+      XLSX.writeFile(wb, "KetQuaDuaNgua.xlsx");
+    });
 
     renderTable();
   </script>
