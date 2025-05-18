@@ -33,7 +33,6 @@
       border-collapse: collapse;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       width: 100%;
-      min-width: 860px;
     }
     th, td {
       border: 1px solid #ddd;
@@ -49,17 +48,32 @@
       font-weight: bold;
     }
     .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 20px;
+      display: flex;
       justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
     }
     .section {
-      width: 100%;
-      overflow-x: auto;
+      flex: 1;
+      min-width: 280px;
+      max-width: 400px;
     }
-    .wide-table {
-      min-width: 1100px;
+
+    /* Thêm style cho nút xuất file */
+    #exportExcelBtn {
+      display: inline-block;
+      margin-left: 15px;
+      padding: 12px 20px;
+      font-size: 18px;
+      background-color: #b80000;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    #exportExcelBtn:hover {
+      background-color: #930000;
     }
   </style>
 </head>
@@ -68,12 +82,15 @@
   <div class="input-area">
     <input type="text" id="nums" maxlength="3" placeholder="VD: 123" />
     <button>Thêm lượt</button>
+
+    <!-- Nút xuất Excel -->
+    <button id="exportExcelBtn" style="display: inline-block;">Xuất Excel</button>
   </div>
 
   <div class="grid">
     <div class="section">
       <h3>📋 Lịch sử đua</h3>
-      <table class="wide-table">
+      <table>
         <thead>
           <tr>
             <th>Lượt</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>Xoá</th>
@@ -109,16 +126,10 @@
         <tbody id="missingBody"></tbody>
       </table>
     </div>
-    <div class="section">
-      <h3>🔮 Dự đoán: Ngựa sắp ra</h3>
-      <table>
-        <thead>
-          <tr><th>Ngựa</th><th>Số lượt không ra</th></tr>
-        </thead>
-        <tbody id="nearPredictionBody"></tbody>
-      </table>
-    </div>
   </div>
+
+  <!-- Thêm thư viện SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <script>
     const input = document.getElementById('nums');
@@ -126,18 +137,17 @@
 
     function calculateStreaks() {
       const streak = {1:0,2:0,3:0,4:0,5:0,6:0};
-      let lastRow = {};
-
-      for (let i = 0; i < dataList.length; i++) {
-        const currentRow = {};
-        for (const n of dataList[i]) {
-          currentRow[n] = true;
-          streak[n] = (lastRow[n] || 0) + 1;
+      // Duyệt ngược dữ liệu từ lượt mới nhất về lượt cũ
+      for (let horse = 1; horse <= 6; horse++) {
+        let count = 0;
+        for (let i = dataList.length - 1; i >= 0; i--) {
+          if (dataList[i].includes(horse)) {
+            count++;
+          } else {
+            break;
+          }
         }
-        for (let j = 1; j <= 6; j++) {
-          if (!currentRow[j]) streak[j] = 0;
-        }
-        lastRow = currentRow;
+        streak[horse] = count;
       }
       return streak;
     }
@@ -145,19 +155,18 @@
     function calculateMissings() {
       const missing = {1:0,2:0,3:0,4:0,5:0,6:0};
 
-      for (let i = dataList.length - 1; i >= 0; i--) {
-        const appeared = dataList[i];
-        for (let j = 1; j <= 6; j++) {
-          if (appeared.includes(j)) {
-            if (missing[j] === 0) missing[j] = -1;
-          } else if (missing[j] !== -1) {
-            missing[j]++;
+      for (let horse = 1; horse <= 6; horse++) {
+        let count = 0;
+        for (let i = dataList.length - 1; i >= 0; i--) {
+          if (dataList[i].includes(horse)) {
+            break; // ngựa xuất hiện, reset đếm
+          } else {
+            count++;
           }
         }
+        missing[horse] = count;
       }
-      for (let j = 1; j <= 6; j++) {
-        if (missing[j] === -1) missing[j] = 0;
-      }
+
       return missing;
     }
 
@@ -166,7 +175,6 @@
       const countBody = document.getElementById('countBody');
       const predictionBody = document.getElementById('predictionBody');
       const missingBody = document.getElementById('missingBody');
-      const nearPredictionBody = document.getElementById('nearPredictionBody');
 
       let countMap = {1:0,2:0,3:0,4:0,5:0,6:0};
       dataBody.innerHTML = '';
@@ -204,24 +212,16 @@
       }
 
       missingBody.innerHTML = '';
-      nearPredictionBody.innerHTML = '';
       const missings = calculateMissings();
       let anyMiss = false;
-      let anyNear = false;
       for(let i=1; i<=6; i++) {
         if(missings[i] >= 3) {
           missingBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${missings[i]} lượt</td></tr>`;
           anyMiss = true;
-        } else if (missings[i] > 0) {
-          nearPredictionBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${missings[i]} lượt</td></tr>`;
-          anyNear = true;
         }
       }
       if(!anyMiss) {
         missingBody.innerHTML = `<tr><td colspan="2">Không có ngựa vắng 3 lượt</td></tr>`;
-      }
-      if(!anyNear) {
-        nearPredictionBody.innerHTML = `<tr><td colspan="2">Không có ngựa nào vắng < 3 lượt</td></tr>`;
       }
     }
 
@@ -251,6 +251,39 @@
         renderTable();
       }
     });
+
+    // Hàm xuất file Excel
+    function exportToExcel() {
+      if(dataList.length === 0) {
+        alert("Không có dữ liệu để xuất.");
+        return;
+      }
+
+      // Tạo mảng dữ liệu cho sheet, gồm tiêu đề và từng lượt
+      const ws_data = [];
+      ws_data.push(["Lượt", "Ngựa 1", "Ngựa 2", "Ngựa 3", "Ngựa 4", "Ngựa 5", "Ngựa 6"]);
+
+      dataList.forEach((row, idx) => {
+        // Tạo mảng 6 phần tử, gán ngựa theo thứ tự vị trí
+        // Nếu ngựa ở vị trí đó thì ghi số ngựa, ngược lại để trống
+        const rowExcel = [idx + 1];
+        for(let horse=1; horse<=6; horse++) {
+          const pos = row.indexOf(horse);
+          rowExcel.push(pos !== -1 ? horse : "");
+        }
+        ws_data.push(rowExcel);
+      });
+
+      // Tạo workbook và worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Lịch sử đua");
+
+      // Xuất file
+      XLSX.writeFile(wb, "KetQuaDuaNguar.xlsx");
+    }
+
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
 
     renderTable();
   </script>
