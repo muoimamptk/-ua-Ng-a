@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>🏇 Ngu</title>
+  <title>🏇 Kết quả đua ngựa</title>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -33,6 +33,7 @@
       border-collapse: collapse;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       width: 100%;
+      min-width: 860px;
     }
     th, td {
       border: 1px solid #ddd;
@@ -48,15 +49,17 @@
       font-weight: bold;
     }
     .grid {
-      display: flex;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: 1fr;
       gap: 20px;
-      flex-wrap: wrap;
+      justify-content: center;
     }
     .section {
-      flex: 1;
-      min-width: 280px;
-      max-width: 400px;
+      width: 100%;
+      overflow-x: auto;
+    }
+    .wide-table {
+      min-width: 1100px;
     }
   </style>
 </head>
@@ -70,7 +73,7 @@
   <div class="grid">
     <div class="section">
       <h3>📋 Lịch sử đua</h3>
-      <table>
+      <table class="wide-table">
         <thead>
           <tr>
             <th>Lượt</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>Xoá</th>
@@ -106,6 +109,15 @@
         <tbody id="missingBody"></tbody>
       </table>
     </div>
+    <div class="section">
+      <h3>🔮 Dự đoán: Ngựa sắp ra</h3>
+      <table>
+        <thead>
+          <tr><th>Ngựa</th><th>Số lượt không ra</th></tr>
+        </thead>
+        <tbody id="nearPredictionBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <script>
@@ -114,45 +126,47 @@
 
     function calculateStreaks() {
       const streak = {1:0,2:0,3:0,4:0,5:0,6:0};
-      // Duyệt ngược dữ liệu từ lượt mới nhất về lượt cũ
-      for (let horse = 1; horse <= 6; horse++) {
-        let count = 0;
-        for (let i = dataList.length - 1; i >= 0; i--) {
-          if (dataList[i].includes(horse)) {
-            count++;
-          } else {
-            break;
-          }
+      let lastRow = {};
+
+      for (let i = 0; i < dataList.length; i++) {
+        const currentRow = {};
+        for (const n of dataList[i]) {
+          currentRow[n] = true;
+          streak[n] = (lastRow[n] || 0) + 1;
         }
-        streak[horse] = count;
+        for (let j = 1; j <= 6; j++) {
+          if (!currentRow[j]) streak[j] = 0;
+        }
+        lastRow = currentRow;
       }
       return streak;
     }
 
     function calculateMissings() {
-  const missing = {1:0,2:0,3:0,4:0,5:0,6:0};
+      const missing = {1:0,2:0,3:0,4:0,5:0,6:0};
 
-  for (let horse = 1; horse <= 6; horse++) {
-    let count = 0;
-    for (let i = dataList.length - 1; i >= 0; i--) {
-      if (dataList[i].includes(horse)) {
-        break; // ngựa xuất hiện, reset đếm
-      } else {
-        count++;
+      for (let i = dataList.length - 1; i >= 0; i--) {
+        const appeared = dataList[i];
+        for (let j = 1; j <= 6; j++) {
+          if (appeared.includes(j)) {
+            if (missing[j] === 0) missing[j] = -1;
+          } else if (missing[j] !== -1) {
+            missing[j]++;
+          }
+        }
       }
+      for (let j = 1; j <= 6; j++) {
+        if (missing[j] === -1) missing[j] = 0;
+      }
+      return missing;
     }
-    missing[horse] = count;
-  }
-
-  return missing;
-}
-
 
     function renderTable() {
       const dataBody = document.getElementById('dataBody');
       const countBody = document.getElementById('countBody');
       const predictionBody = document.getElementById('predictionBody');
       const missingBody = document.getElementById('missingBody');
+      const nearPredictionBody = document.getElementById('nearPredictionBody');
 
       let countMap = {1:0,2:0,3:0,4:0,5:0,6:0};
       dataBody.innerHTML = '';
@@ -190,16 +204,24 @@
       }
 
       missingBody.innerHTML = '';
+      nearPredictionBody.innerHTML = '';
       const missings = calculateMissings();
       let anyMiss = false;
+      let anyNear = false;
       for(let i=1; i<=6; i++) {
         if(missings[i] >= 3) {
           missingBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${missings[i]} lượt</td></tr>`;
           anyMiss = true;
+        } else if (missings[i] > 0) {
+          nearPredictionBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${missings[i]} lượt</td></tr>`;
+          anyNear = true;
         }
       }
       if(!anyMiss) {
         missingBody.innerHTML = `<tr><td colspan="2">Không có ngựa vắng 3 lượt</td></tr>`;
+      }
+      if(!anyNear) {
+        nearPredictionBody.innerHTML = `<tr><td colspan="2">Không có ngựa nào vắng < 3 lượt</td></tr>`;
       }
     }
 
