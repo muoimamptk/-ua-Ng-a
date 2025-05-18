@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>🏇 Kết quả đua ngựa</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #fefefe;
+      color: #222;
+      padding: 20px;
+      text-align: center;
+    }
+    h2, h3 {
+      color: #b80000;
+    }
+    .input-area {
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      width: 100px;
+      height: 50px;
+      font-size: 24px;
+      text-align: center;
+      border: 2px solid #b80000;
+      border-radius: 8px;
+      background-color: #fff5f5;
+    }
+    button {
+      display: none;
+    }
+    table {
+      border-collapse: collapse;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px;
+      font-size: 14px;
+    }
+    th {
+      background-color: #f44336;
+      color: white;
+    }
+    .number-cell {
+      background-color: #e6f7ff;
+      font-weight: bold;
+    }
+    .grid {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .section {
+      flex: 1;
+      min-width: 280px;
+      max-width: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h2>🏇 Kết quả đua ngựa</h2>
+  <div class="input-area">
+    <input type="text" id="nums" maxlength="3" placeholder="VD: 123" />
+    <button>Thêm lượt</button>
+  </div>
+
+  <div class="grid">
+    <div class="section">
+      <h3>📋 Lịch sử đua</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Lượt</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>Xoá</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody"></tbody>
+      </table>
+    </div>
+    <div class="section">
+      <h3>📊 Số lần ngựa về top 3</h3>
+      <table>
+        <thead>
+          <tr><th>Ngựa</th><th>Lượt về top</th></tr>
+        </thead>
+        <tbody id="countBody"></tbody>
+      </table>
+    </div>
+    <div class="section">
+      <h3>🔮 Dự đoán: Ngựa nổi bật</h3>
+      <table>
+        <thead>
+          <tr><th>Ngựa</th><th>Chuỗi liên tiếp</th></tr>
+        </thead>
+        <tbody id="predictionBody"></tbody>
+      </table>
+    </div>
+    <div class="section">
+      <h3>⏱️ Ngựa 3 lần chưa ra</h3>
+      <table>
+        <thead>
+          <tr><th>Ngựa</th><th>Số lượt vắng mặt</th></tr>
+        </thead>
+        <tbody id="missingBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById('nums');
+    let dataList = [];
+
+    function calculateStreaks() {
+      const streak = {1:0,2:0,3:0,4:0,5:0,6:0};
+      // Duyệt ngược dữ liệu từ lượt mới nhất về lượt cũ
+      for (let horse = 1; horse <= 6; horse++) {
+        let count = 0;
+        for (let i = dataList.length - 1; i >= 0; i--) {
+          if (dataList[i].includes(horse)) {
+            count++;
+          } else {
+            break;
+          }
+        }
+        streak[horse] = count;
+      }
+      return streak;
+    }
+
+    function calculateMissings() {
+  const missing = {1:0,2:0,3:0,4:0,5:0,6:0};
+
+  for (let horse = 1; horse <= 6; horse++) {
+    let count = 0;
+    for (let i = dataList.length - 1; i >= 0; i--) {
+      if (dataList[i].includes(horse)) {
+        break; // ngựa xuất hiện, reset đếm
+      } else {
+        count++;
+      }
+    }
+    missing[horse] = count;
+  }
+
+  return missing;
+}
+
+
+    function renderTable() {
+      const dataBody = document.getElementById('dataBody');
+      const countBody = document.getElementById('countBody');
+      const predictionBody = document.getElementById('predictionBody');
+      const missingBody = document.getElementById('missingBody');
+
+      let countMap = {1:0,2:0,3:0,4:0,5:0,6:0};
+      dataBody.innerHTML = '';
+      dataList.forEach((row, idx) => {
+        const colors = ['#b80000', '#0077b6', '#000'];
+        const cells = Array(6).fill('{}').map((_, i) => {
+          const index = row.indexOf(i + 1);
+          const color = index !== -1 ? colors[index] : '';
+          const value = index !== -1 ? i + 1 : '';
+          if (value) countMap[i + 1]++;
+          return `<td class='number-cell' style="color: ${color}">${value}</td>`;
+        }).join('');
+        dataBody.innerHTML += `<tr>
+          <td>${idx + 1}</td>${cells}
+          <td><button onclick="handleDelete(${idx})" style="font-size: 10px; padding: 2px 6px">x</button></td>
+        </tr>`;
+      });
+
+      countBody.innerHTML = '';
+      for(let i=1; i<=6; i++) {
+        countBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${countMap[i]}</td></tr>`;
+      }
+
+      predictionBody.innerHTML = '';
+      const streaks = calculateStreaks();
+      let anyStreak = false;
+      for(let i=1; i<=6; i++) {
+        if(streaks[i] >= 3) {
+          predictionBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${streaks[i]} lần</td></tr>`;
+          anyStreak = true;
+        }
+      }
+      if(!anyStreak) {
+        predictionBody.innerHTML = `<tr><td colspan="2">Không có ngựa nổi bật</td></tr>`;
+      }
+
+      missingBody.innerHTML = '';
+      const missings = calculateMissings();
+      let anyMiss = false;
+      for(let i=1; i<=6; i++) {
+        if(missings[i] >= 3) {
+          missingBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${missings[i]} lượt</td></tr>`;
+          anyMiss = true;
+        }
+      }
+      if(!anyMiss) {
+        missingBody.innerHTML = `<tr><td colspan="2">Không có ngựa vắng 3 lượt</td></tr>`;
+      }
+    }
+
+    function handleDelete(idx) {
+      dataList.splice(idx, 1);
+      renderTable();
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter') {
+        const val = input.value.trim();
+        if(val.length !== 3) {
+          alert('Vui lòng nhập đúng 3 số từ 1 đến 6.');
+          return;
+        }
+        if(!/^[1-6]{3}$/.test(val)) {
+          alert('Chỉ được nhập số từ 1 đến 6.');
+          return;
+        }
+        const digits = val.split('');
+        if(new Set(digits).size !== 3) {
+          alert('Không được nhập số trùng nhau.');
+          return;
+        }
+        dataList.push(digits.map(Number));
+        input.value = '';
+        renderTable();
+      }
+    });
+
+    renderTable();
+  </script>
+</body>
+</html>
