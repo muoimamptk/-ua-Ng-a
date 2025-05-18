@@ -27,7 +27,7 @@
       background-color: #fff5f5;
     }
     button {
-      display: none;
+      /* nút "Thêm lượt" đã bị xoá nên không ảnh hưởng */
     }
     table {
       border-collapse: collapse;
@@ -75,16 +75,57 @@
     #exportExcelBtn:hover {
       background-color: #930000;
     }
+
+    /* Style nút quay số */
+    #spinBtn {
+      display: inline-block;
+      margin-left: 15px;
+      padding: 12px 20px;
+      font-size: 18px;
+      background-color: #0077b6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    #spinBtn:hover {
+      background-color: #005f87;
+    }
+
+    #spinResult {
+      font-size: 24px;
+      margin-left: 20px;
+      font-weight: bold;
+    }
+
+    /* Style nút sửa (nút x nhỏ lại) */
+    .btn-edit {
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background-color: #b80000;
+      color: white;
+      border: none;
+      cursor: pointer;
+      user-select: none;
+    }
+    .btn-edit:hover {
+      background-color: #930000;
+    }
   </style>
 </head>
 <body>
   <h2>🏇 Kết quả đua ngựa</h2>
   <div class="input-area">
     <input type="text" id="nums" maxlength="3" placeholder="VD: 123" />
-    <button>Thêm lượt</button>
 
     <!-- Nút xuất Excel -->
     <button id="exportExcelBtn" style="display: inline-block;">Xuất Excel</button>
+
+    <!-- Nút quay số và kết quả -->
+    <button id="spinBtn">Quay số</button>
+    <span id="spinResult"></span>
   </div>
 
   <div class="grid">
@@ -93,7 +134,7 @@
       <table>
         <thead>
           <tr>
-            <th>Lượt</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>Xoá</th>
+            <th>Lượt</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>Sửa</th>
           </tr>
         </thead>
         <tbody id="dataBody"></tbody>
@@ -189,7 +230,7 @@
         }).join('');
         dataBody.innerHTML += `<tr>
           <td>${idx + 1}</td>${cells}
-          <td><button onclick="handleDelete(${idx})" style="font-size: 10px; padding: 2px 6px">x</button></td>
+          <td><button onclick="handleEdit(${idx})" class="btn-edit">x</button></td>
         </tr>`;
       });
 
@@ -225,7 +266,12 @@
       }
     }
 
-    function handleDelete(idx) {
+    function handleEdit(idx) {
+      const row = dataList[idx];
+      // Chuyển giá trị về dạng string "123"
+      input.value = row.join('');
+      input.focus();
+      // Xoá lượt cũ để sửa
       dataList.splice(idx, 1);
       renderTable();
     }
@@ -264,8 +310,6 @@
       ws_data.push(["Lượt", "Ngựa 1", "Ngựa 2", "Ngựa 3", "Ngựa 4", "Ngựa 5", "Ngựa 6"]);
 
       dataList.forEach((row, idx) => {
-        // Tạo mảng 6 phần tử, gán ngựa theo thứ tự vị trí
-        // Nếu ngựa ở vị trí đó thì ghi số ngựa, ngược lại để trống
         const rowExcel = [idx + 1];
         for(let horse=1; horse<=6; horse++) {
           const pos = row.indexOf(horse);
@@ -274,16 +318,20 @@
         ws_data.push(rowExcel);
       });
 
-      // Tạo workbook và worksheet
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(ws_data);
       XLSX.utils.book_append_sheet(wb, ws, "Lịch sử đua");
 
-      // Xuất file
       XLSX.writeFile(wb, "KetQuaDuaNguar.xlsx");
     }
 
     document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+
+    // Thêm xử lý quay số
+    document.getElementById('spinBtn').addEventListener('click', () => {
+      const result = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('spinResult').textContent = `🎲 Kết quả quay: ${result}`;
+    });
 
     renderTable();
   </script>
