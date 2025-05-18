@@ -58,6 +58,23 @@
       min-width: 280px;
       max-width: 400px;
     }
+
+    /* Thêm style cho nút xuất file */
+    #exportExcelBtn {
+      display: inline-block;
+      margin-left: 15px;
+      padding: 12px 20px;
+      font-size: 18px;
+      background-color: #b80000;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    #exportExcelBtn:hover {
+      background-color: #930000;
+    }
   </style>
 </head>
 <body>
@@ -65,6 +82,9 @@
   <div class="input-area">
     <input type="text" id="nums" maxlength="3" placeholder="VD: 123" />
     <button>Thêm lượt</button>
+
+    <!-- Nút xuất Excel -->
+    <button id="exportExcelBtn" style="display: inline-block;">Xuất Excel</button>
   </div>
 
   <div class="grid">
@@ -108,6 +128,9 @@
     </div>
   </div>
 
+  <!-- Thêm thư viện SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
   <script>
     const input = document.getElementById('nums');
     let dataList = [];
@@ -130,23 +153,22 @@
     }
 
     function calculateMissings() {
-  const missing = {1:0,2:0,3:0,4:0,5:0,6:0};
+      const missing = {1:0,2:0,3:0,4:0,5:0,6:0};
 
-  for (let horse = 1; horse <= 6; horse++) {
-    let count = 0;
-    for (let i = dataList.length - 1; i >= 0; i--) {
-      if (dataList[i].includes(horse)) {
-        break; // ngựa xuất hiện, reset đếm
-      } else {
-        count++;
+      for (let horse = 1; horse <= 6; horse++) {
+        let count = 0;
+        for (let i = dataList.length - 1; i >= 0; i--) {
+          if (dataList[i].includes(horse)) {
+            break; // ngựa xuất hiện, reset đếm
+          } else {
+            count++;
+          }
+        }
+        missing[horse] = count;
       }
+
+      return missing;
     }
-    missing[horse] = count;
-  }
-
-  return missing;
-}
-
 
     function renderTable() {
       const dataBody = document.getElementById('dataBody');
@@ -229,6 +251,39 @@
         renderTable();
       }
     });
+
+    // Hàm xuất file Excel
+    function exportToExcel() {
+      if(dataList.length === 0) {
+        alert("Không có dữ liệu để xuất.");
+        return;
+      }
+
+      // Tạo mảng dữ liệu cho sheet, gồm tiêu đề và từng lượt
+      const ws_data = [];
+      ws_data.push(["Lượt", "Ngựa 1", "Ngựa 2", "Ngựa 3", "Ngựa 4", "Ngựa 5", "Ngựa 6"]);
+
+      dataList.forEach((row, idx) => {
+        // Tạo mảng 6 phần tử, gán ngựa theo thứ tự vị trí
+        // Nếu ngựa ở vị trí đó thì ghi số ngựa, ngược lại để trống
+        const rowExcel = [idx + 1];
+        for(let horse=1; horse<=6; horse++) {
+          const pos = row.indexOf(horse);
+          rowExcel.push(pos !== -1 ? horse : "");
+        }
+        ws_data.push(rowExcel);
+      });
+
+      // Tạo workbook và worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Lịch sử đua");
+
+      // Xuất file
+      XLSX.writeFile(wb, "KetQuaDuaNguar.xlsx");
+    }
+
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
 
     renderTable();
   </script>
